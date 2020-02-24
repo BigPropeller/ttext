@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ttext',
-    version='0.0.1',
+    version='0.0.2',
     description='A library for auto-converting URLs, mentions, hashtags, lists, etc. in Twitter text. Also does tweet validation and search term highlighting.',
     author='Gain App',
     author_email='developers@gainapp.com',
