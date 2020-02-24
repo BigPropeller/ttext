@@ -5,25 +5,30 @@ from ttext.unicode import force_unicode
 
 narrow_build = True
 try:
-    unichr(0x20000)
+    chr(0x20000)
     narrow_build = False
-except:
+except (ValueError, OverflowError):
     pass
 
-parser = argparse.ArgumentParser(description = u'Run the integration tests for ttext')
-parser.add_argument('--ignore-narrow-errors', '-i', help = u'Ignore errors caused by narrow builds', default = False, action = 'store_true')
+parser = argparse.ArgumentParser(description='Run the integration tests for ttext')
+parser.add_argument('--ignore-narrow-errors', '-i', help='Ignore errors caused by narrow builds', default=False,
+                    action='store_true')
 args = parser.parse_args()
 
 try:
     import yaml
 except ImportError:
-    raise Exception('You need to install pyaml to run the tests')
+    raise Exception('You need to install PyYaml to run the tests')
 # from http://stackoverflow.com/questions/2890146/how-to-force-pyyaml-to-load-strings-as-unicode-objects
 from yaml import Loader, SafeLoader
+
+
 def construct_yaml_str(self, node):
     return self.construct_scalar(node)
-Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
-SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
+
+
+Loader.add_constructor('tag:yaml.org,2002:str', construct_yaml_str)
+SafeLoader.add_constructor('tag:yaml.org,2002:str', construct_yaml_str)
 
 try:
     from bs4 import BeautifulSoup
@@ -33,28 +38,41 @@ except ImportError:
     except ImportError:
         raise Exception('You need to install BeautifulSoup to run the tests')
 
+
 def success(text):
-    return (u'\033[92m%s\033[0m\n' % text).encode('utf-8')
+    return '\033[92m%s\033[0m\n' % text
+
 
 def error(text):
-    return (u'\033[91m%s\033[0m\n' % text).encode('utf-8')
+    return '\033[91m%s\033[0m\n' % text
+
 
 attempted = 0
 
-def assert_equal_without_attribute_order(result, test, failure_message = None):
+
+def assert_equal_without_attribute_order(result, test, failure_message=None):
     global attempted
     attempted += 1
     # Beautiful Soup sorts the attributes for us so we can skip all the hoops the ruby version jumps through
-    assert BeautifulSoup(result) == BeautifulSoup(test.get('expected')), error(u'Test %d Failed: %s' % (attempted, test.get('description')))
-    sys.stdout.write(success(u'Test %d Passed: %s' % (attempted, test.get('description'))))
+    assert BeautifulSoup(result) == BeautifulSoup(test.get('expected')), error(
+        'Test %d Failed: %s' % (attempted, test.get('description')))
+    print(success('Test %d Passed: %s' % (attempted, test.get('description'))))
     sys.stdout.flush()
+
 
 def assert_equal(result, test):
     global attempted
     attempted += 1
-    assert result == test.get('expected'), error(u'\nTest %d Failed: %s%s' % (attempted, test.get('description'), u'\n%s' % test.get('hits') if test.get('hits') else ''))
-    sys.stdout.write(success(u'Test %d Passed: %s' % (attempted, test.get('description'))))
+    print("=" * 80)
+    print(result)
+    print("=" * 80)
+    print(test.get('expected'))
+    print("=" * 80)
+    error_message = error('\nTest %d Failed: %s%s' % (attempted, test.get('description'), '\n%s' % test.get('hits') if test.get('hits') else ''))
+    assert result == test.get('expected'), error_message
+    print(success('Test %d Passed: %s' % (attempted, test.get('description'))))
     sys.stdout.flush()
+
 
 # extractor section
 extractor_file = open(os.path.join('twitter-text-conformance', 'conformance', 'extract.yml'), 'r')
@@ -68,7 +86,9 @@ for section in extractor_tests.get('tests'):
     sys.stdout.write('\nTesting Extractor: %s\n' % section)
     sys.stdout.flush()
     for test in extractor_tests.get('tests').get(section):
-        if (args.ignore_narrow_errors or narrow_build) and section in ['hashtags'] and test.get('description') in ['Hashtag with ideographic iteration mark']:
+        section_tag = section in ['hashtags']
+        description_match = test.get('description') in ['Hashtag with ideographic iteration mark']
+        if (args.ignore_narrow_errors or narrow_build) and section_tag and description_match:
             sys.stdout.write('Skipping: %s\n' % test.get('description'))
             sys.stdout.flush()
             continue
@@ -107,7 +127,8 @@ autolink_options = {'suppress_no_follow': True}
 for section in autolink_tests.get('tests'):
     sys.stdout.write('\nTesting Autolink: %s\n' % section)
     for test in autolink_tests.get('tests').get(section):
-        if (args.ignore_narrow_errors or narrow_build) and section in ['hashtags'] and test.get('description') in ['Autolink a hashtag containing ideographic iteration mark']:
+        if (args.ignore_narrow_errors or narrow_build) and section in ['hashtags'] and test.get('description') in [
+            'Autolink a hashtag containing ideographic iteration mark']:
             sys.stdout.write('Skipping: %s\n' % test.get('description'))
             sys.stdout.flush()
             continue
@@ -125,7 +146,8 @@ for section in autolink_tests.get('tests'):
         elif section == 'lists':
             assert_equal_without_attribute_order(autolink.auto_link_usernames_or_lists(autolink_options), test)
         elif section == 'json':
-            assert_equal_without_attribute_order(autolink.auto_link_with_json(json.loads(test.get('json')), autolink_options), test)
+            assert_equal_without_attribute_order(
+                autolink.auto_link_with_json(json.loads(test.get('json')), autolink_options), test)
 
 # hit_highlighting section
 hit_highlighting_file = open(os.path.join('twitter-text-conformance', 'conformance', 'hit_highlighting.yml'), 'r')
@@ -140,9 +162,9 @@ for section in hit_highlighting_tests.get('tests'):
     for test in hit_highlighting_tests.get('tests').get(section):
         hit_highlighter = ttext.highlighter.HitHighlighter(test.get('text'))
         if section == 'plain_text':
-            assert_equal(hit_highlighter.hit_highlight(hits = test.get('hits')), test)
+            assert_equal(hit_highlighter.hit_highlight(hits=test.get('hits')), test)
         elif section == 'with_links':
-            assert_equal_without_attribute_order(hit_highlighter.hit_highlight(hits = test.get('hits')), test)
+            assert_equal_without_attribute_order(hit_highlighter.hit_highlight(hits=test.get('hits')), test)
 
 # validation section
 validation_tested = False
@@ -150,7 +172,9 @@ validate_tests = None
 try:
     validate_file = open(os.path.join('twitter-text-conformance', 'conformance', 'validate.yml'), 'r')
     validate_file_contents = validate_file.read()
-    validate_tests = yaml.load(re.sub(ur'\\n', '\n', validate_file_contents.encode('unicode-escape')))
+    validate_tests = yaml.load(
+        re.sub(r'\\n', '\n', validate_file_contents.encode('unicode-escape'))
+    )
     validate_file.close()
 except ValueError:
     sys.stdout.write('\nValidation tests were skipped because of wide character issues\n')
@@ -175,6 +199,6 @@ if validate_tests:
             elif section == 'urls':
                 assert_equal(validator.valid_url(), test)
 
-sys.stdout.write(u'\033[0m-------\n\033[92m%d tests passed.\033[0m\n' % attempted)
+sys.stdout.write('\033[0m-------\n\033[92m%d tests passed.\033[0m\n' % attempted)
 sys.stdout.flush()
 sys.exit(os.EX_OK)

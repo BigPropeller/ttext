@@ -6,6 +6,7 @@ from ttext.highlighter import HitHighlighter
 from ttext.validation import Validation
 from ttext.unicode import force_unicode
 
+
 class TwitterText(object):
     def __init__(self, text):
         self.text = force_unicode(text) # this will get modified by some functions

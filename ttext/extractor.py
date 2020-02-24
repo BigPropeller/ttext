@@ -3,6 +3,7 @@
 from ttext.regex import REGEXEN
 from ttext.unicode import force_unicode
 
+
 class Extractor(object):
     """
     A module for including Tweet parsing in a class. This module provides function for the extraction and processing
@@ -55,7 +56,7 @@ class Extractor(object):
 
         return entities
 
-    def extract_mentioned_screen_names(self, transform = lambda x: x):
+    def extract_mentioned_screen_names(self, transform=lambda x: x):
         """
         Extracts a list of all usernames mentioned in the Tweet text. If the
         text is None or contains no username mentions an empty list
@@ -101,7 +102,7 @@ class Extractor(object):
         if not REGEXEN['at_signs'].search(self.text):
             return []
 
-        possible_entries    =   []
+        possible_entries = []
         for match in REGEXEN['valid_mention_or_list'].finditer(self.text):
             try:
                 after = self.text[match.end()]
@@ -146,7 +147,7 @@ class Extractor(object):
         """
         return [transform(url['url']) for url in self.extract_urls_with_indices()]
         
-    def extract_urls_with_indices(self, options = {'extract_url_without_protocol': True}):
+    def extract_urls_with_indices(self, options=None):
         """
         Extracts a list of all URLs included in the Tweet text along
         with the indices. If the text is None or contains no
@@ -154,6 +155,10 @@ class Extractor(object):
 
         If a block is given then it will be called for each URL.
         """
+        if options is None:
+            options = {
+                'extract_url_without_protocol': True
+            }
         urls = []
         for match in REGEXEN['valid_url'].finditer(self.text):
             complete, before, url, protocol, domain, port, path, query = match.groups()
@@ -172,9 +177,9 @@ class Extractor(object):
                         'url':      ascii_domain,
                         'indices':  [start_position - len(before or '') + complete.find(ascii_domain), start_position - len(before or '') + complete.find(ascii_domain) + len(ascii_domain)]
                     }
-                    last_url_invalid_match = REGEXEN['invalid_short_domain'].search(ascii_domain) is not None
-                    if not last_url_invalid_match:
-                        urls.append(last_url)
+                    # last_url_invalid_match = REGEXEN['invalid_short_domain'].search(ascii_domain) is not None
+                    # if not last_url_invalid_match:
+                    urls.append(last_url)
                 # no ASCII-only domain found. Skip the entire URL
                 if not last_url:
                     continue
